@@ -1,0 +1,387 @@
+---
+title: "Introduction to Machine Learning"
+subtitle: "Final Project Code"
+author: "Drew Benedum, Eric Shin, & Zach Stabrowski"
+date: last-modified
+format:
+  html: 
+    df-print: paged
+    embed-resources: true
+editor: visual
+---
+
+# Final Project Code
+
+```{r, message = F, warning = F}
+library(ggplot2)
+library(readr)
+library(rpart)
+library(tidyverse)
+library(randomForest)
+library(partykit)
+library(class)
+```
+
+## Part 1: Download the necessary data
+
+```{r, message = F, warning = F}
+#Assigning the cancer data as an object
+cancer <- read_csv("C:/Users/zstab/OneDrive/Desktop/Intro to Machine Learning/Datasets/FNA_cancer.csv") 
+#Setting the diagnosis variable as a factor
+cancer$diagnosis <- as.factor(cancer$diagnosis)
+#Converting variables to valid names
+colnames(cancer) <- make.names(colnames(cancer)) 
+# provide a glimpse of the data set
+glimpse(cancer)
+```
+
+## Part 2: Perform basic EDA
+
+```{r}
+# the last column appears to be entirely NA values, so we will remove it from the data
+summary(cancer$...33)
+# the id variable is also not pertinent as a predictor, so we will remove that as well
+cancer <- cancer %>% select(-c(...33, id))
+glimpse(cancer)
+```
+
+***The last column in the data set was filled with NA values, and it was also not mentioned as one of the data points that was selected in the project description. Thus, we concluded that it was not an important variable and may have even been included in the data set by mistake, so we removed for this analysis. We also decided that the id variable was not of use as a predictor, so we removed that as well, leaving our data set with just the response variable (diagnosis) and the 30 remaining variables to use as potential predictors.\
+***
+
+```{r}
+# visualize the response variable
+table(cancer$diagnosis)
+diagnosis_plot <- ggplot(cancer, aes(x=diagnosis, fill=diagnosis)) +
+  geom_bar() +
+  labs(title="Comparison of Diagnosis Class", x="Diagnosis", y="Count", fill="Diagnosis")
+diagnosis_plot
+```
+
+```{r}
+# convert response variable into binary numeric to calculate correlation with predictors
+cancer_cor <- cancer %>%
+  mutate(diagnosis = ifelse(diagnosis=="M",1,0))
+# examine correlation between response variable and predictors
+diagnosis_cor <- cor(cancer_cor)["diagnosis", ]
+diagnosis_cor
+# using 0.6 as a cutoff, identify variables that appear to be moderately to strongly correlated with diagnosis
+high_corr <- names(diagnosis_cor[abs(diagnosis_cor)>0.6])
+high_corr
+```
+
+***Based on the values of their correlation coefficients, none of the standard error variables appeared to be strongly correlated with diagnosis, so they are not likely to be strong indicators of the response. Similarly, none of the variables for texture, smoothness, compactness, symmetry, or fractal dimension appear to be strongly correlated with response, so they may not be useful predictors of the response either. This leaves us with the mean and maximum values of the radius, perimeter, area, concavity, and concave points as variables we will expect to potentially be the most important predictors our models will use to make predictions for the diagnosis.\
+***
+
+```{r}
+# create boxplot to examine radius_mean for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=radius_mean, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing radius_mean for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine perimeter_mean for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=perimeter_mean, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing perimeter_mean for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine area_mean for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=area_mean, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing area_mean for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine concavity_mean for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=concavity_mean, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing concavity_mean for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine concavity_mean vs radius mean 
+ggplot(cancer, aes(x=radius_mean, y=concavity_mean, color=diagnosis)) +
+  geom_point() +
+  labs(title="Relationship between concavity_mean and radius_mean",color="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine concavity_mean vs perimeter_mean 
+ggplot(cancer, aes(x=perimeter_mean, y=concavity_mean, color=diagnosis)) +
+  geom_point() +
+  labs(title="Relationship between concavity_mean and perimeter_mean",color="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine concave.points_mean for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=concave.points_mean, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing concave.points_mean for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine radius_worst for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=radius_worst, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing radius_worst for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine perimeter_worst for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=perimeter_worst, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing perimeter_worst for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine area_worst for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=area_worst, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing area_worst for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine concavity_worst for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=concavity_worst, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing concavity_worst for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine concavity_worst vs radius_worst
+ggplot(cancer, aes(x=radius_worst, y=concavity_worst, color=diagnosis)) +
+  geom_point() +
+  labs(title="Relationship between concavity_worst and radius_worst",color="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine concavity_worst vs area_worst
+ggplot(cancer, aes(x=area_worst, y=concavity_worst, color=diagnosis)) +
+  geom_point() +
+  labs(title="Relationship between concavity_worst and area_worst",color="Diagnosis")
+```
+
+```{r}
+# create boxplot to examine concave.points_worst for each class of Diagnosis 
+ggplot(cancer, aes(x=diagnosis, y=concave.points_worst, fill=diagnosis)) +
+  geom_boxplot() +
+  labs(title="Comparing concave.points_worst for Diagnosis class", x="Diagnosis",fill="Diagnosis")
+```
+
+***As we can see in the plots above, malignant tissue masses appear to generally have higher values for the mean and maximum measurements of radius, perimeter, area, concavity, and concave points. Both measurements of concavity appear to have upper outliers for benign tumors that on their own may lead someone to believe that the tissue mass is malignant, but as we see in the scatter plots above, whether or not these points also have large values for the other characteristics such as radius or perimeter appears to play a significant role in the classification of these points, indicating that the combination of these predictors is a good one as they both provide relevant information in determining the classification of the response variable, diagnosis.***
+
+## Part 3: Split the data into test and training sets
+
+```{r}
+#Setting seed for reproducibility
+set.seed(1842)
+#Getting the number of rows of the data
+n <- nrow(cancer) 
+#Randomly selecting test indices which is 20% of the data
+test_index <- sample.int(n, size = round(0.2 * n)) 
+#Dividing data into a training and a test set, dividing the data randomly with 80% of the data in the training set and 20% in the test set
+test_cancer <- cancer[test_index, ]
+train_cancer <- cancer[-test_index, ] 
+#Providing a glimpse of the test dataset
+glimpse(test_cancer) 
+#Providing a glimpse of the training dataset
+glimpse(train_cancer) 
+```
+
+## Part 4: Build a classification algorithm using decision trees
+
+```{r}
+#Predicting the diagnosis variable from the rest of the variables in the data
+form_cancer <- as.formula(diagnosis ~ .) 
+#create the decision tree predicting diagnosis from predictors in training data
+cancer_tree <- rpart(form_cancer, data=train_cancer)
+plot(as.party(cancer_tree))
+printcp(cancer_tree)
+```
+
+```{r}
+# use the decision tree to predict diagnosis for the test data
+test_cancer$preds_tree <- predict(cancer_tree, newdata = test_cancer, "class")
+# create a confusion matrix to show predicted vs actual results
+conf_tree <- table(test_cancer$diagnosis, test_cancer$preds_tree,
+                   dnn=c("actual", "predicted"))
+conf_tree
+# calculate the accuracy of decision tree predictions
+acc_tree <- sum(diag(conf_tree))/sum(conf_tree)
+acc_tree
+```
+
+***As we can see in the output above, the decision tree only has two potential splits. It first looks at the concave.points_worst value, and if that number is greater than or equal to 0.147, that tissue mass is predicted to be malignant. If that value is less than 0.147, the tree then looks at the area_worst variable, with any tissue mass with a value greater than or equal to 957.45 predicted to be malignant and any with a value less than 957.45 predicted to be benign. When this decision tree is applied to our test data, 65 observations are correctly predicted as benign and 39 are correctly predicted as malignant, while 6 are incorrectly predicted as benign and 4 are incorrectly predicted as malignant. This gives us an overall accuracy of about 91.23%, which does make it seem to be effective. However, a potential concern is that this tree could be sensitive to small change in data. For example, we saw in the boxplot above that concave.points_worst has the potential for lower outliers. which could make one of these observations more susceptible to a false negative prediction if area_worst also misses the threshold. We also saw in the boxplot that this variable has the potential for upper outliers in benign tissues, potentially causing these observations to be immediately classified as malignant after looking at only one measurement.\
+\
+The rpart function should automatically pre-prune the decision tree based on CP. We have established a larger decision tree below and pruned it appropriately to demonstrate this.***
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+# create a "bigger" tree to show rpart has already pre-pruned our tree
+cancer_tree2 <- rpart(form_cancer, data=train_cancer, minsplit=7, cp=0)
+plot(as.party(cancer_tree2))
+printcp(cancer_tree2)
+```
+
+```{r}
+# use plotcp to identify the ideal cp value
+plotcp(cancer_tree2)
+```
+
+```{r}
+# plot the bigger tree, pruned down with cp=0.041
+plot(as.party(prune(cancer_tree2,cp=0.041)))
+# make predictions using the bigger tree pruned with identified cp value
+test_cancer$preds_tree2 <- predict(prune(cancer_tree2,0.041), newdata = test_cancer, "class")
+# create confusion matrix of actual vs predicted values
+conf_tree2 <- table(test_cancer$diagnosis, test_cancer$preds_tree2,
+                   dnn=c("actual", "predicted"))
+conf_tree2
+# calculate the accuracy of this decision tree
+acc_tree2 <- sum(diag(conf_tree2))/sum(conf_tree2)
+acc_tree2
+```
+
+***After pruning the tree to the appropriate CP value determined from the plot, we see we end up with the same decision tree and prediction results that we did with our initial tree.***
+
+## Part 5: Build a classification algorithm using random forests
+
+```{r}
+#Setting seed for reproducibility
+set.seed(1842) 
+#Training the random forest model with 200 trees, randomly selecting 5 variables at each split in the tree
+forest_cancer <- randomForest(formula = form_cancer, data = train_cancer, mtry = 5, ntree = 200) 
+#Printing the output for the model
+forest_cancer 
+```
+
+***The Random Forest model performed well with an OOB (Out-of-Bag) error rate of 3.08%, meaning it made very few mistakes when tested on unseen data. Looking at the confusion matrix, the model correctly identified 281 benign cases (non-cancerous) and 159 malignant cases (cancerous). However, it made a few errors: it incorrectly labeled 6 benign cases as malignant and 8 malignant cases as benign. In terms of accuracy, the model made only 2.1% errors in identifying benign cases and 4.8% errors in identifying malignant cases. Overall, this shows that the model is performing well, with slightly more difficulty in correctly classifying malignant cases compared to benign ones.***
+
+```{r}
+#Predicting the test data
+forest_pred <- predict(forest_cancer, newdata = test_cancer) 
+#Creating a confusion matrix comparing actual vs predicted values
+conf_forest <- table(Predicted = forest_pred, Actual = test_cancer$diagnosis) 
+#Printing the confusion matrix
+conf_forest
+#Calculate accuracy of the random forest
+acc_forest <- sum(diag(conf_forest))/sum(conf_forest)
+acc_forest
+```
+
+***The confusion matrix for the test data shows that the model was able to correctly identify 66 benign cases (non-cancerous) and 41 malignant cases (cancerous). However, it made a few errors: it mistakenly labeled 4 benign cases as malignant and 3 malignant cases as benign. Overall, the model performs well with very few mistakes, accurately identifying most of the cases in both categories.***
+
+```{r}
+ #Producing a table giving the importance of each variable in the model using mtry = 5, ntree = 200
+importance(forest_cancer)
+```
+
+***The MeanDecreaseGini values show how important each variable is in the model’s decision-making process. A higher value means the variable is more influential in helping the model distinguish between malignant (cancerous) and benign (non-cancerous) tumors. For example, concave.points_mean and radius_worst are the most important variables, with values of 27.26 and 23.28, meaning they play a key role in identifying tumor types. On the other hand, variables like symmetry_mean and fractal_dimension_mean have much lower values, suggesting they have less impact on the model’s predictions. This information helps in deciding which variables are most useful when creating the model.***
+
+## Part 6: Build a classification algorithm using K-Nearest Neighbors
+
+```{r}
+# reset the test dataset to use in the knn function
+test_cancer <- cancer[test_index,]
+# build the knn model with k = 1
+knn_cancer <- knn(train_cancer[-1],test=test_cancer[-1],cl=train_cancer$diagnosis,k=1)
+# create confusion matrix comparing actual vs predicted values
+conf_knn <- table(knn_cancer,test_cancer$diagnosis)
+conf_knn
+# calculate accuracy of the knn model
+acc_knn <- sum(diag(conf_knn))/sum(conf_knn)
+acc_knn
+```
+
+***The KNN was able to hold a 90.35% accuracy rating for detecting a positive diagnosis. The way KNN works is similar to a pond full of Lilly pads with a frog hopping from pad to pad. The frog wont jump 20 feet away, but might jump to the next pad 2 feet away. Similarly, KNN gives an input to each data point and gives a prediction based on them. In this case, the predictions were 90.35%.***
+
+## Part 7: Build a classification algorithm using logistic regression
+
+```{r, message = F, warning = F}
+library(MASS)
+library(caret)
+```
+
+***Below are the variables the company would like to test as predictors to a diagnosis. They are put into the logistic regression function to find the results.***
+
+```{r, warning = F}
+# fit the glm model with the selected predictors
+cancer_glm <- glm(diagnosis ~ radius_mean + texture_se + perimeter_se + area_se + smoothness_mean + compactness_mean + concavity_mean + concave.points_mean + symmetry_se + fractal_dimension_mean, data = cancer, family = binomial)
+# display the summary of the model
+summary(cancer_glm)
+```
+
+***There are ways to weed out models with too many un-needed variables. The AIC functions from the MASS package can help us with this.***
+
+```{r, warning = F}
+AIC(cancer_glm)
+stepAIC(cancer_glm)
+```
+
+```{r, warning = F}
+# fit the model suggested by stepAIC
+cancer_glm_2<- glm(formula = diagnosis ~ radius_mean + perimeter_se + area_se + 
+    concavity_mean + concave.points_mean + symmetry_se, family = binomial, 
+    data = cancer)
+AIC(cancer_glm_2)
+```
+
+***We used the AIC and stepAIC function to ensure we have the best selected model for the logistical regression. There were only 6 factors left from the origional model and achieved a lower AIC reading of 204.64 down from over 210.***
+
+```{r}
+# predict the response variable with the original glm model
+glm_pred <- predict(cancer_glm, newdata = test_cancer, type = "response")
+# create confusion matrix showing predicted vs actual results
+conf_glm <- table(Predicted = round(glm_pred), Actual = test_cancer$diagnosis)
+conf_glm
+# calculate accuracy of the model
+acc_glm <- sum(diag(conf_glm))/sum(conf_glm)
+acc_glm
+```
+
+```{r}
+# predict response variable with model suggested by step AIC
+glm_pred2 <- predict(cancer_glm_2, newdata = test_cancer, type = "response")
+# generate confusion matrix showing predicted vs actual results
+conf_glm2 <- table(Predicted = round(glm_pred2), Actual = test_cancer$diagnosis)
+conf_glm2
+# calculate accuracy of the model
+acc_glm2 <- sum(diag(conf_glm2))/sum(conf_glm2)
+acc_glm2
+```
+
+***As we can see, even though the AIC function selected a smaller model, the original model is still better at predicting. This means we can stick with the original model. Logistic regression works by a series of binary decisions, or decisions with only 2 outcomes.***
+
+##  Part 8: Create a comparison of the different models on appropriate criteria
+
+```{r}
+# calculate sensitivity and specificty for the decision tree
+sens_tree <- conf_tree[4] / (conf_tree[3] + conf_tree[4])
+spec_tree <- conf_tree[1] / (conf_tree[1] + conf_tree[2])
+# calculate sensitivity and specificity for the random forest
+sens_forest <- conf_forest[4] / (conf_forest[3] + conf_forest[4])
+spec_forest <- conf_forest[1] / (conf_forest[1] + conf_forest[2])
+# calculate sensitivity and specificity for the knn model
+sens_knn <- conf_knn[4] / (conf_knn[3] + conf_knn[4])
+spec_knn <- conf_knn[1] / (conf_knn[1] + conf_knn[2])
+# calculate sensitivity and specificity for the glm model
+sens_glm <- conf_glm[4] / (conf_glm[3] + conf_glm[4])
+spec_glm <- conf_glm[1] / (conf_glm[1] + conf_glm[2])
+```
+
+```{r}
+# combine the values into rows to use in our comparison table
+Acc <- c(acc_tree, acc_forest, acc_knn, acc_glm)
+Sens <- c(sens_tree, sens_forest, sens_knn, sens_glm)
+Spec <- c(spec_tree, spec_forest, spec_knn, spec_glm)
+table_matrix <- rbind(Acc, Sens, Spec)
+# Define column and row names
+colnames(table_matrix) <- c("Decision Tree", "Random Forest", "KNN", "Logistic Regression")
+rownames(table_matrix) <- c("Acc", "Sens", "Spec")
+# Convert matrix to a table
+model_compare <- as.table(table_matrix)
+model_compare
+```
