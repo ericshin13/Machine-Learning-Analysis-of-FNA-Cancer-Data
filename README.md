@@ -19,3 +19,5 @@ This project explored a breast cancer diagnostic dataset derived from fine needl
 ![Logistic Regression Explanation 2](https://github.com/user-attachments/assets/f748830b-f4d6-41fc-baf7-b9ed691d2ccd)
 
 ![Comparing Machine Learning Models](https://github.com/user-attachments/assets/2794c23f-3043-4e78-bebf-0d8986311923)
+
+![Comparing Machine Learning Models Explanation](https://github.com/user-attachments/assets/e80602de-de3c-4ada-8bf4-7bb8f0068973)
