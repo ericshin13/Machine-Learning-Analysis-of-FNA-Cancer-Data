@@ -21,3 +21,8 @@ This project explored a breast cancer diagnostic dataset derived from fine needl
 ![Comparing Machine Learning Models](https://github.com/user-attachments/assets/2794c23f-3043-4e78-bebf-0d8986311923)
 
 ![Comparing Machine Learning Models Explanation](https://github.com/user-attachments/assets/e80602de-de3c-4ada-8bf4-7bb8f0068973)
+
+## Technology Used: R Programming Language
+## Project Code is located in the qmd file
+## Project Report is located in the html file (Download raw file)
+## Project Data is located in the csv file (Download raw file)
