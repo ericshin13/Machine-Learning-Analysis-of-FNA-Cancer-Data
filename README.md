@@ -1,5 +1,7 @@
 # Machine Learning Analysis of FNA Cancer Data
 This project explored a breast cancer diagnostic dataset derived from fine needle aspiration (FNA) of breast masses. Using machine learning and statistical analysis, the goal was to accurately classify tumors as malignant or benign based on features computed from digitized images of cell nuclei.
+![Predicting Cancer Formula](https://github.com/user-attachments/assets/16345a3d-a94e-44d1-8589-b05c7ac24850)
+
 ![Decision Tree](https://github.com/user-attachments/assets/23080893-0943-472a-87cf-d83d8eda2391)
 
 ![Decision Tree Explanation](https://github.com/user-attachments/assets/b60db689-5952-48f1-b953-3af2a046af5e)
